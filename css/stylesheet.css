@@ -1,0 +1,13 @@
+body {
+      background-color: #AAEEFF;
+}
+
+p.title-bar {
+	font: bold 36px monospace;
+	text-align: center;
+}
+
+p.subtitle {
+	font: italic 16px sans-serif;
+	text-align: center;
+}
