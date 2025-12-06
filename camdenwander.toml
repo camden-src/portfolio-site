@@ -1,0 +1,36 @@
+baseURL = 'https://camdenwander.com/'
+languageCode = 'en-us'
+title = 'Camden Wander'
+theme = 'ananke'
+
+[params]
+  description = "Personal portfolio site"
+  
+[markup.goldmark.renderer]
+  unsafe = true
+
+[deployment]
+  [[deployment.targets]]
+    name = "linode-object-storage"
+    URL = "s3://camdenwander-com?endpoint=us-east-1.linodeobjects.com&region=us-east-1"
+    
+    # CloudFront-like cache invalidation isn't needed for Object Storage
+    cloudFrontDistributionID = ""
+
+[[deployment.matchers]]
+  # Cache static assets for 1 year
+  pattern = "^.+\\.(js|css|svg|ttf|woff|woff2)$"
+  cacheControl = "max-age=31536000, no-transform, public"
+  gzip = true
+
+[[deployment.matchers]]
+  # Cache images for 1 year
+  pattern = "^.+\\.(png|jpg|jpeg|gif|webp)$"
+  cacheControl = "max-age=31536000, no-transform, public"
+  gzip = false
+
+[[deployment.matchers]]
+  # Set default cache control for HTML
+  pattern = "^.+\\.(html|xml|json)$"
+  cacheControl = "max-age=0, no-cache, no-store, must-revalidate"
+  gzip = true
