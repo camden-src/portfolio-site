@@ -1,0 +1,40 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<link rel="stylesheet" href="css/camden-wander.css" />
+	</head>
+	<body>
+		<canvas id="webgl-bg"></canvas>
+		<div id="title">
+			<p class="title-bar">Camden Wander</p>
+		</div>
+		<div id="subtitle" class="title_footer">
+			<p class="subtitle">Interdisciplinary Artist</p>
+		</div>
+		<div id="filters" class="content_filter">
+			<div class="track-columns">
+				<div id="produced-tracks" class="track-column">
+					<h3>Produced Tracks</h3>
+					<ul></ul>
+				</div>
+				<div id="dj-mixes" class="track-column">
+					<h3>DJ Mixes</h3>
+					<ul></ul>
+				</div>
+			</div>
+		</div>
+		<div id="controls" class="controls">
+			<button id="play-pause-btn" class="play-pause-btn" disabled>&#9654;</button>
+			<div id="timeline" class="timeline">
+				<div id="timeline-played" class="timeline-played"></div>
+			</div>
+			<audio id="player"></audio>
+		</div>
+		<script src="//cdn.jsdelivr.net/npm/hls.js"></script>
+		<script src="//cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+		<script src="js/webgl-background.js"></script>
+		<script src="js/camden-wander.js"></script>
+	<body>
+</html>

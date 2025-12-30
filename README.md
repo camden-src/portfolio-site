@@ -1,2 +1,3 @@
-# portfolio-site
-Camden Wander portfolio site code
+# portolfio-site
+Front end code for an artist's portfolio site.
+
