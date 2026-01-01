@@ -10,7 +10,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# Clone and build Bento4
 WORKDIR /build
 RUN git clone --depth 1 https://github.com/axiomatic-systems/Bento4.git
 
@@ -21,20 +20,16 @@ RUN cmake -DCMAKE_BUILD_TYPE=Release . && \
 # Create minimal runtime image
 FROM docker.io/library/debian:bookworm-slim
 
-# Install runtime dependencies only
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy Bento4 binaries from builder
 COPY --from=builder /build/Bento4/bin /usr/local/bin/
 
-# Create working directory
 WORKDIR /work
 
-# Verify installation
+# Verifies installation
 RUN mp42hls --help || true && \
     mp4info --help || true
 
-# Default command
 CMD ["/bin/bash"]

@@ -6,7 +6,7 @@ body {
 	flex-direction: column;
 }
 
-#filters {
+#media-list {
 	flex: 1;
 }
 
@@ -74,13 +74,13 @@ p.subtitle {
 	margin-bottom: 0;
 }
 
-.content_filter ul {
+.media-list ul {
 	list-style: none;
 	padding: 0;
 	text-align: center;
 }
 
-.content_filter li {
+.media-list li {
 	margin-bottom: 0.5rem;
 }
 
