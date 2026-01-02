@@ -1,5 +1,5 @@
 body {
-	background-color: #0D0D08;
+	background-color: #0F0D08;
 	margin: 0;
 	min-height: 100vh;
 	display: flex;
@@ -94,7 +94,7 @@ p.subtitle {
 	border: 3px double #008080;
 	border-radius: 8px;
 	padding: 4px 8px;
-	font: bold 16px 'Rubik', sans-serif;
+	font: 16px 'Rubik', sans-serif;
 	cursor: pointer;
 	color: #008080;
 	box-shadow: 2px 2px 4px #9400D3;
@@ -109,7 +109,7 @@ p.subtitle {
 .track-active .track-btn {
 	color: #9400D3;
 	border-color: #9400D3;
-	box-shadow: 0 0 8px #CC9900;
+	box-shadow: 0 0 8px #FFD700;
 }
 
 .controls {
@@ -123,8 +123,8 @@ p.subtitle {
 
 .play-pause-btn {
 	background: none;
-	border: 2px solid #00CED1;
-	color: #00CED1;
+	border: 2px solid #9400D3;
+	color: #9400D3;
 	font-size: 24px;
 	width: 40px;
 	height: 40px;
@@ -136,13 +136,21 @@ p.subtitle {
 }
 
 .play-pause-btn.playing {
-	border-color: #CC9900;
-	color: #CC9900;
+	border-color: #FFD700;
+	color: #FFD700;
+}
+
+@keyframes flash {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
 }
 
 .play-pause-btn:hover:not(:disabled) {
-	color: #FFD700;
-	border-color: #FFD700;
+	animation: flash 0.5s linear infinite; 
 }
 
 .play-pause-btn:disabled {
