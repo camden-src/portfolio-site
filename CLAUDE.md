@@ -408,8 +408,9 @@ site-root/
 ├── nope.html                # 404 error page (s3cmd ws-create)
 ├── css/camden-wander.css    # Styles
 ├── js/
+│   ├── bitmap-background.js # 1-bit GIF background with trigonometric color cycling
 │   └── camden-wander.js     # HLS player, track lists, audio analysis
-├── img/                     # Artwork images
+├── img/                     # Artwork images (1-bit GIF bitmaps)
 └── hls/
     ├── production/         # Produced tracks
     │   └── {track}/master.m3u8
@@ -419,7 +420,9 @@ site-root/
         └── {performance}/master.m3u8
 ```
 
-**Key Flow:** `index.html` loads HLS.js from CDN. `camden-wander.js` builds track lists and handles HLS playback with Web Audio API analysis.
+**Key Flow:** `index.html` loads HLS.js from CDN. `bitmap-background.js` renders animated 1-bit GIF background. `camden-wander.js` builds track lists and handles HLS playback with Web Audio API analysis.
+
+**Cache Busting:** `index.html` contains `CACHE_VERSION` placeholders in CSS and JS URLs (`?v=CACHE_VERSION`). The deployment script replaces these with Unix timestamps to force browser cache invalidation.
 
 **404 Page:** `nope.html` serves as the 404 error page, configured via `s3cmd ws-create` when setting up the S3 bucket for static website hosting.
 
@@ -531,9 +534,9 @@ Embeds EXIF/IPTC/XMP metadata into artwork images using exiftool.
 ./md-embed/image_metadata/launch-image-metadata-container.sh --force-rebuild
 ```
 
-**Manifest:** `md-embed/image_metadata/images.json`
+**Manifest:** `site-root/img/images.json`
 
-The manifest defines metadata to be embedded into artwork images in `site-root/img/`.
+The manifest is stored alongside the artwork images and defines metadata to be embedded.
 
 ```json
 {
@@ -568,8 +571,13 @@ The manifest defines timed ID3 metadata to be injected into HLS segments in `sit
 
 **Usage:**
 ```bash
-# Create required directories for source segments
+# Create required directories (if using default paths)
+mkdir -p md-embed/hls_metadata/metadata
 mkdir -p md-embed/hls_metadata/segments
+mkdir -p md-embed/hls_metadata/output
+
+# Move audio.json to metadata subdirectory (or override METADATA_DIR)
+cp md-embed/hls_metadata/audio.json md-embed/hls_metadata/metadata/
 
 # Place source HLS segments in segments/
 # Edit audio.json manifest to define metadata
@@ -581,12 +589,18 @@ mkdir -p md-embed/hls_metadata/segments
 ./md-embed/hls_metadata/launch-hls-metadata-container.sh --force-rebuild
 ```
 
-Container mounts:
-- /work/metadata (read-only) - Maps to md-embed/hls_metadata/ (includes audio.json)
-- /work/segments (read-only) - Source HLS segments
-- /work/output (read-write) - Output directory
+**Container mounts (default paths):**
+- /work/metadata (read-only) - Maps to `md-embed/hls_metadata/metadata/` (expects audio.json here)
+- /work/segments (read-only) - Maps to `md-embed/hls_metadata/segments/`
+- /work/output (read-write) - Maps to `md-embed/hls_metadata/output/`
 
-Override directories via environment variables: METADATA_DIR, SEGMENTS_DIR, OUTPUT_DIR
+**Override default paths via environment variables:**
+```bash
+METADATA_DIR=/path/to/metadata \
+SEGMENTS_DIR=/path/to/segments \
+OUTPUT_DIR=/path/to/output \
+./md-embed/hls_metadata/launch-hls-metadata-container.sh
+```
 
 **Bento4 Tools** (available in container at /usr/local/bin/):
 - mp42hls - Convert MP4 to HLS with timed metadata
@@ -677,7 +691,7 @@ Deploys site-root to Linode Object Storage via s3cmd.
 
 ```
 publish/
-├── Dockerfile                  # Debian + s3cmd, developer user
+├── Dockerfile                  # Debian + ca-certificates + s3cmd, developer user
 ├── bucket-policy.json          # Public read policy for bucket
 ├── deploy.sh                   # s3cmd sync with exclusions
 └── launch-deploy-container.sh  # Mounts ~/.s3cfg
@@ -688,9 +702,28 @@ publish/
 ./publish/launch-deploy-container.sh
 ```
 
-The deployment script (`deploy.sh`) syncs `/workspace/site-root/` to S3 with exclusions:
-- `*.md` - Markdown documentation files
-- Metadata manifests are stored in `/workspace/md-embed/` and not part of site-root deployment
+The deployment script (`deploy.sh`) performs multiple operations:
+1. Generates cache-busting version (Unix timestamp)
+2. Injects version into `index.html` (replaces `CACHE_VERSION` placeholder)
+3. Applies `bucket-policy.json` to grant public read access to all objects
+4. Syncs files by type with explicit MIME types:
+   - `*.css` → `text/css`
+   - `*.js` → `application/javascript`
+   - `*.html` → `text/html`
+   - `*.m3u8` → `application/vnd.apple.mpegurl` (HLS playlists)
+   - `*.ts` → `video/mp2t` (HLS segments)
+   - Other files → auto-detected via `--guess-mime-type`
+5. Restores `CACHE_VERSION` placeholder in `index.html` (keeps git repo clean)
+6. All syncs use `--delete-removed` to remove files from S3 that were deleted locally
+7. Excludes `*.md` markdown files from deployment
+
+Metadata manifests are stored in `/workspace/md-embed/` and not part of site-root deployment.
+
+**Cache Busting:** CSS and JS files are loaded with `?v=CACHE_VERSION` query strings in `index.html`. During deployment, the placeholder is replaced with the current Unix timestamp, forcing browsers to reload updated assets. The placeholder is restored after deployment to avoid git repository changes.
+
+**Why explicit MIME types?** The `--guess-mime-type` flag doesn't always work correctly on all systems. Syncing by file type with `--mime-type` ensures correct Content-Type headers for browser compatibility.
+
+**Bucket Policy:** The `bucket-policy.json` defines a public read policy allowing anonymous access to all objects in the bucket (required for static website hosting).
 
 **Initial Setup:**
 The S3 bucket is configured for static website hosting using `s3cmd ws-create`:
@@ -707,10 +740,92 @@ This configures `index.html` as the default index page and `nope.html` as the 40
 
 ## Color Scheme
 
-- **Teal** `#008080` - Primary text, borders
-- **Purple** `#9400D3` - Accent shadows, active states
-- **Gold** `#FFD700` / `#CC9900` - Hover states, timeline
+- **Teal** `#008080` / `#00B0B0` - Primary text, borders
+- **Purple** `#8400C3` - Accent shadows, active states
+- **Yellow** `#FFFF00` - Hover states, timeline
 - **Dark background** `#0F0D08`
+
+## UI Design
+
+### Track List Layout
+
+Track lists use SVG-based trapezoid buttons organized in asymmetric groups with responsive flex layout:
+
+- **Releases** - Left-aligned (track-group-left)
+- **Performances** - Right-aligned (track-group-right)
+- **DJ Mixes (Vinyl)** - Left-aligned (track-group-left)
+
+**Responsive Layout:**
+- **Wide screens:** Track groups flex side-by-side in a row (staggered appearance)
+- **Medium screens:** Track groups wrap and stack vertically (min-width: 300px per group)
+- **All screens:** Items maintain their alignment within containers
+  - Left-aligned: positioned from left edge, overflow to the right if too wide
+  - Right-aligned: positioned from right edge, overflow to the left if too wide
+
+**Dynamic SVG Sizing:**
+Each track is rendered as an `<a class="track-item">` containing an SVG with dynamically calculated dimensions:
+- Text width measured using OffscreenCanvas (measureSvgTextWidth function)
+- Font properties extracted from computed styles of `.track-item svg text` CSS selector
+- SVG trapezoid width (svgTrapezoidWidth) = measured text width (svgTextWidth) + 168px (84px padding on each side)
+- SVG height = 30px
+
+**Trapezoid Geometry:**
+Trapezoids are "rotated 180 degrees" based on alignment:
+
+- **Left-aligned** (track-group-left):
+  - Polygon points: `20,30 80,0 ${svgTrapezoidWidth},0 ${svgTrapezoidWidth - 80},30`
+  - Slant on left side (narrow top-left, wide bottom-left)
+  - Text: x=84, text-anchor=start
+
+- **Right-aligned** (track-group-right):
+  - Polygon points: `80,30 0,0 ${svgTrapezoidWidth - 80},0 ${svgTrapezoidWidth},30`
+  - Slant on right side (wide bottom-right, narrow top-right)
+  - Text: x=(svgTrapezoidWidth - 84), text-anchor=end
+
+Section headers use fixed-width SVGs with the same trapezoid geometry patterns.
+
+**Color Scheme:**
+- **Section Headers** (static, no hover): Teal fill (#008080), purple text (#8400C3), Orbitron 24px bold
+- **Track Items** (default): Teal fill (#008080), purple text (#8400C3), Orbitron 18px
+- **Track Items** (hover): Teal fill with yellow drop shadow (drop-shadow(0 0 8px #FFFF00)), yellow text (#FFFF00)
+- **Track Items** (active/playing): Purple fill (#8400C3) with yellow drop shadow, yellow text (#FFFF00)
+
+### Bitmap Background Animation
+
+**Implementation:** 1-bit GIF bitmap from `/workspace/img/` rendered as full-screen background with trigonometric color cycling.
+
+**Current Bitmap:** `pathological-defensive-pessimism.gif`
+
+**Canvas Setup:**
+- Fixed position canvas (`#bitmap-bg`) at z-index: -1
+- Full viewport coverage (100% width/height)
+- 30% opacity for subtle background effect
+- `image-rendering: pixelated` to preserve bitmap aesthetic
+- Scales to cover viewport (maintains aspect ratio)
+
+**Color Cycling (bitmap-background.js):**
+- 20-second period (PERIOD = 20000ms)
+- RGB range: 0x00 (minimum) to 0x88 (maximum)
+- Starting color: Dark cherry red (#880000)
+
+**Trigonometric Functions:**
+- **Red channel:** Cosine wave `r = midpoint + amplitude * cos(phase)`
+- **Green channel:** Arccosine transformation `g = midpoint + amplitude * (acos(cos(phase)) / π * 2 - 1)`
+- **Blue channel:** Sine wave `b = midpoint + amplitude * sin(phase)`
+- Phase = (elapsed time % PERIOD) / PERIOD * 2π
+
+**Rendering:**
+- Loads GIF, captures original image data
+- Per-frame: applies current color to pixel brightness values
+- Uses OffscreenCanvas for color transformation
+- requestAnimationFrame for smooth 60fps animation
+- Window resize handling to maintain full coverage
+
+**Future Enhancement:**
+- Multiple bitmap layers
+- Web Audio API frequency bucket integration (similar to bass bins 4-6)
+- Per-layer color and opacity modulation
+- Audio-reactive visual experience
 
 ## No Build/Test/Lint
 
